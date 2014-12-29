@@ -1,0 +1,200 @@
+<?php
+require_once("uc_oklink.pages.inc");
+require_once("/lib/Oklink.php");
+
+define ('OKLINK_WEBSITE', "http://localtest.oklink.com");
+define ('OKLINK_BITCOIN_LOGO_PATH', base_path() . drupal_get_path('module', 'uc_oklink') . '/bitcoin-accepted.png');
+define ('OKLINK_NOTIFY_URL', "uc_oklink/notifications");
+define ('OKLINK_INVOICE_EXPIRATION_TIME', "10"); // in minutes; keep as a string
+
+/**
+ * Settings form for the oklink payment method module.
+ * Not directly hooked into by Ubercart; called by
+ * uc_payment_method_oklink()
+ *
+ * @return array
+ */
+function uc_oklink_settings_form()
+{
+    global $base_url;
+
+    $form          = array();
+    $form['general'] = array(
+        '#type'        => 'fieldset',
+        '#title'       => t('General settings'),
+        '#collapsible' => FALSE,
+        '#collapsed'   => FALSE,
+    );
+    $form['general']['uc_oklink_api_key'] = array(
+        '#type'          => 'textfield',
+        '#title'         => t('API Key'),
+        '#default_value' => variable_get('uc_oklink_api_key', ''),
+       );
+    $form['general']['uc_oklink_api_secret'] = array(
+        '#type'    => 'textfield',
+        '#title'   => t('API Secret'),
+        '#default_value' => variable_get('uc_oklink_api_secret', ''),
+    );
+
+    return $form;
+}
+
+/**
+ * Implements hook_menu().
+ *
+ * @return array
+ */
+function uc_oklink_menu()
+{
+    // Always accessible, accepts POST data from oklink's servers
+    // when being notified of status changes to an invoice.
+    $items[OKLINK_NOTIFY_URL] = array(
+        'title'           => 'oklink Notifications',
+        'access callback' => TRUE,
+        'page callback'   => 'uc_oklink_notification',
+        'type'            => MENU_CALLBACK,
+        'file'            => 'uc_oklink.pages.inc',
+    );
+
+    return $items;
+}
+
+/**
+ * Display help and module information
+ * @param path which path of the site we're displaying help
+ * @param arg array that holds the current path as would be returned from arg() function
+ * @return help text for the path
+ */
+function uc_oklink_help($path, $arg)
+{
+    $o = '';  // declare your output variable
+    switch ($path)
+    {
+    case "admin/help#oklink":
+        $o .= '<p>' . t('Implements the acceptance of bitcoin payments through the') . " oklink.com " . t('API.') . '</p>';
+        break;
+    }
+    return $o;
+} // end function - uc_oklink_help
+
+
+/**
+ * Implements hook_uc_payment_method().
+ *
+ * @return array
+ */
+function uc_oklink_uc_payment_method()
+{
+
+        $title = '<img src="' . OKLINK_BITCOIN_LOGO_PATH .
+            '" style="position:relative; top:5px; margin-right:6px;" />' .
+            t('Pay with Bitcoins via Oklink.');
+
+        $methods[] = array(
+            'id'         => 'oklink',
+            'name'       => t('Oklink'),
+            'title'      => $title,
+            'review'     => t('Bitcoin via oklink'),
+            'desc'       => t('Make a payment using bitcoins.'),
+            'callback'   => 'uc_payment_method_oklink',
+            'weight'     => 1,
+            'checkout'   => TRUE,
+            'no_gateway' => TRUE,
+        );
+
+        return $methods;
+}
+
+
+/**
+ * Implementation of hook_uc_order().
+ *
+ * @param $op
+ * @param $arg1
+ * @param $arg2
+ */
+
+
+function uc_oklink_uc_order($op, $order, $arg2)
+{
+    global $base_url;
+
+
+    if (($order->payment_method == 'oklink') && (!variable_get('uc_oklink_debug_mode', 0) || 
+        user_access('access administration menu')))
+    {
+        switch ($op)
+        {
+
+        case 'new':
+        case 'save':
+            break;
+        case 'total':
+            break;
+        case 'load':      
+            break;
+        case 'submit':
+            $client = Oklink::withApiKey(variable_get('uc_oklink_api_key',''),variable_get('uc_oklink_api_secret',''));
+
+            if( variable_get('clean_url', '0') == 0 ){
+                $callback_url = $base_url . '/?q=uc_oklink/notifications'; 
+                $success_url  = $base_url . '/?q=cart/checkout'; 
+            }else{
+                $callback_url = $base_url . '/uc_oklink/notifications';
+                $success_url  = $base_url . '/cart/checkout'; 
+            }
+
+            $site_url = variable_get('uc_oklink_base_url', $base_url);
+            $params = array(
+                        'name'           => 'Order #'.$order->order_id,
+                        'price'          => uc_order_get_total($order),
+                        'price_currency' => $order->currency,
+                        'callback_url'   => $callback_url,
+                        'success_url'    => $success_url,
+                );
+            $result = $client->buttonsButton($params);
+            var_dump($result);
+            if( $result && $result->button ){
+                db_insert('uc_payment_oklink')
+                    ->fields(array(
+                        'button_id'    => $result->button->id,
+                        'order_id'     => $order->order_id,
+                    ))
+                    ->execute();
+            }
+            break;
+        } // end switch - check for order action taken
+    } // end if - check to make sure payment method is 'oklink', etc.
+} // end function - uc_oklink_uc_order
+
+/**
+ * Payment method callback for the oklink payment method
+ *
+ * @param $op
+ * @param $order
+ */
+function uc_payment_method_oklink($op, &$order)
+{
+    switch ($op)
+    {
+    case 'settings':
+        return uc_oklink_settings_form();
+        break;
+
+    case 'cart-details':
+        $txt = '<br /><br />' . t('The price will be converted to bitcoins at the current to-the-minute exchange rate, and you will have') . ' ' . OKLINK_INVOICE_EXPIRATION_TIME . ' ' . t('minutes to send payment before the invoice expires.');
+        return array('#markup' => $txt);
+        break;
+    case 'customer-view':
+        if( $order->order_status == 'pending' ){
+            $button_id = db_query("SELECT button_id FROM {uc_payment_oklink} WHERE order_id = :order_id", array(':order_id' => $order->order_id))->fetchField();
+                // display the invoice ID, with a link to the url
+            $url = OKLINK_WEBSITE.'/merchant/mPayOrderStemp1.do?buttonid='.$button_id;
+            $txt =  '<a href="' . $url . '" target="_blank" class="form-submit">Pay It</a>';
+            return array('#markup' => $txt);           
+        } 
+
+        break;
+    }
+} // end function - uc_payment_method_oklink
+
