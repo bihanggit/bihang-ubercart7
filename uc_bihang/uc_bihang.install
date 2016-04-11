@@ -7,24 +7,24 @@
  *
  * @return array
  */
-function uc_oklink_requirements($phase)
+function uc_bihang_requirements($phase)
 {
     $t = get_t();
 
-    // oklink's provided API code requires cURL.
+    // bihang's provided API code requires cURL.
     $has_curl = function_exists('curl_init');
     //initialize requirements
     $requirements = array();
-    if (variable_get('uc_payment_method_oklink_checkout', FALSE))
+    if (variable_get('uc_payment_method_bihang_checkout', FALSE))
     { 
-        $requirements['uc_oklink_curl'] = array(
+        $requirements['uc_bihang_curl'] = array(
             'title' => $t('cURL'),
             'value' => $has_curl ? $t('Enabled') : $t('Not found'),
         );
         if (!$has_curl)
         {
-            $requirements['uc_oklink_curl']['severity'] = REQUIREMENT_ERROR;
-            $requirements['uc_oklink_curl']['description'] = $t("oklink requires the PHP <a href='!curl_url'>cURL</a> library.", array('!curl_url' => 'http://php.net/manual/en/curl.setup.php'));
+            $requirements['uc_bihang_curl']['severity'] = REQUIREMENT_ERROR;
+            $requirements['uc_bihang_curl']['description'] = $t("bihang requires the PHP <a href='!curl_url'>cURL</a> library.", array('!curl_url' => 'http://php.net/manual/en/curl.setup.php'));
         }
     }
 
@@ -36,15 +36,15 @@ function uc_oklink_requirements($phase)
  *
  * @return array
  */
-function uc_oklink_schema()
+function uc_bihang_schema()
 {
     $schema = array();
 
-    $schema['uc_payment_oklink'] = array(
-        'description' => 'Stores oklink payment information.',
+    $schema['uc_payment_bihang'] = array(
+        'description' => 'Stores bihang payment information.',
         'fields' => array(
             'button_id' => array(
-                'description' => 'Primary key: the oklink button ID.',
+                'description' => 'Primary key: the bihang button ID.',
                 'type'        => 'varchar',
                 'length'      => 127,
                 'not null'    => TRUE,
@@ -72,10 +72,10 @@ function uc_oklink_schema()
 /**
  * Implementation of hook_install().
  *
- * Installs the oklink module; particularly, installs the database
- * schema and alters orders statuses to include 'oklink pending'.
+ * Installs the bihang module; particularly, installs the database
+ * schema and alters orders statuses to include 'bihang pending'.
  */
-function uc_oklink_install()
+function uc_bihang_install()
 {
     // Set the module weight so it can override other modules.
 
@@ -83,7 +83,7 @@ function uc_oklink_install()
         ->fields(array(
             'weight' => 99,
         ))
-        ->condition('name', 'uc_oklink')
+        ->condition('name', 'uc_bihang')
         ->execute();
 }
 
@@ -91,13 +91,13 @@ function uc_oklink_install()
 /**
  * Implementation of hook_uninstall()
  *
- * Uninstalls the oklink module.
+ * Uninstalls the bihang module.
  */
-function uc_oklink_uninstall()
+function uc_bihang_uninstall()
 {
     // Remove relevant data from the DB
 
     db_delete('variable')
-        ->condition('name', 'uc_oklink_%%', 'LIKE')
+        ->condition('name', 'uc_bihang_%%', 'LIKE')
         ->execute(); 
 }

@@ -1,20 +1,20 @@
 <?php
-require_once("uc_oklink.pages.inc");
-require_once("/lib/Oklink.php");
+require_once("uc_bihang.pages.inc");
+require_once("/lib/Bihang.php");
 
-define ('OKLINK_WEBSITE', "http://localtest.oklink.com");
-define ('OKLINK_BITCOIN_LOGO_PATH', base_path() . drupal_get_path('module', 'uc_oklink') . '/bitcoin-accepted.png');
-define ('OKLINK_NOTIFY_URL', "uc_oklink/notifications");
-define ('OKLINK_INVOICE_EXPIRATION_TIME', "10"); // in minutes; keep as a string
+define ('BIHANG_WEBSITE', "http://www.bihang.com");
+define ('BIHANG_BITCOIN_LOGO_PATH', base_path() . drupal_get_path('module', 'uc_bihang') . '/bitcoin-accepted.png');
+define ('BIHANG_NOTIFY_URL', "uc_bihang/notifications");
+define ('BIHANG_INVOICE_EXPIRATION_TIME', "10"); // in minutes; keep as a string
 
 /**
- * Settings form for the oklink payment method module.
+ * Settings form for the bihang payment method module.
  * Not directly hooked into by Ubercart; called by
- * uc_payment_method_oklink()
+ * uc_payment_method_bihang()
  *
  * @return array
  */
-function uc_oklink_settings_form()
+function uc_bihang_settings_form()
 {
     global $base_url;
 
@@ -25,15 +25,15 @@ function uc_oklink_settings_form()
         '#collapsible' => FALSE,
         '#collapsed'   => FALSE,
     );
-    $form['general']['uc_oklink_api_key'] = array(
+    $form['general']['uc_bihang_api_key'] = array(
         '#type'          => 'textfield',
         '#title'         => t('API Key'),
-        '#default_value' => variable_get('uc_oklink_api_key', ''),
+        '#default_value' => variable_get('uc_bihang_api_key', ''),
        );
-    $form['general']['uc_oklink_api_secret'] = array(
+    $form['general']['uc_bihang_api_secret'] = array(
         '#type'    => 'textfield',
         '#title'   => t('API Secret'),
-        '#default_value' => variable_get('uc_oklink_api_secret', ''),
+        '#default_value' => variable_get('uc_bihang_api_secret', ''),
     );
 
     return $form;
@@ -44,16 +44,16 @@ function uc_oklink_settings_form()
  *
  * @return array
  */
-function uc_oklink_menu()
+function uc_bihang_menu()
 {
-    // Always accessible, accepts POST data from oklink's servers
+    // Always accessible, accepts POST data from bihang's servers
     // when being notified of status changes to an invoice.
-    $items[OKLINK_NOTIFY_URL] = array(
-        'title'           => 'oklink Notifications',
+    $items[BIHANG_NOTIFY_URL] = array(
+        'title'           => 'bihang Notifications',
         'access callback' => TRUE,
-        'page callback'   => 'uc_oklink_notification',
+        'page callback'   => 'uc_bihang_notification',
         'type'            => MENU_CALLBACK,
-        'file'            => 'uc_oklink.pages.inc',
+        'file'            => 'uc_bihang.pages.inc',
     );
 
     return $items;
@@ -65,17 +65,17 @@ function uc_oklink_menu()
  * @param arg array that holds the current path as would be returned from arg() function
  * @return help text for the path
  */
-function uc_oklink_help($path, $arg)
+function uc_bihang_help($path, $arg)
 {
     $o = '';  // declare your output variable
     switch ($path)
     {
-    case "admin/help#oklink":
-        $o .= '<p>' . t('Implements the acceptance of bitcoin payments through the') . " oklink.com " . t('API.') . '</p>';
+    case "admin/help#bihang":
+        $o .= '<p>' . t('Implements the acceptance of bitcoin payments through the') . " bihang.com " . t('API.') . '</p>';
         break;
     }
     return $o;
-} // end function - uc_oklink_help
+} // end function - uc_bihang_help
 
 
 /**
@@ -83,20 +83,20 @@ function uc_oklink_help($path, $arg)
  *
  * @return array
  */
-function uc_oklink_uc_payment_method()
+function uc_bihang_uc_payment_method()
 {
 
-        $title = '<img src="' . OKLINK_BITCOIN_LOGO_PATH .
+        $title = '<img src="' . BIHANG_BITCOIN_LOGO_PATH .
             '" style="position:relative; top:5px; margin-right:6px;" />' .
-            t('Pay with Bitcoins via Oklink.');
+            t('Pay with Bitcoins via Bihang.');
 
         $methods[] = array(
-            'id'         => 'oklink',
-            'name'       => t('Oklink'),
+            'id'         => 'bihang',
+            'name'       => t('Bihang'),
             'title'      => $title,
-            'review'     => t('Bitcoin via oklink'),
+            'review'     => t('Bitcoin via bihang'),
             'desc'       => t('Make a payment using bitcoins.'),
-            'callback'   => 'uc_payment_method_oklink',
+            'callback'   => 'uc_payment_method_bihang',
             'weight'     => 1,
             'checkout'   => TRUE,
             'no_gateway' => TRUE,
@@ -115,12 +115,12 @@ function uc_oklink_uc_payment_method()
  */
 
 
-function uc_oklink_uc_order($op, $order, $arg2)
+function uc_bihang_uc_order($op, $order, $arg2)
 {
     global $base_url;
 
 
-    if (($order->payment_method == 'oklink') && (!variable_get('uc_oklink_debug_mode', 0) || 
+    if (($order->payment_method == 'bihang') && (!variable_get('uc_bihang_debug_mode', 0) || 
         user_access('access administration menu')))
     {
         switch ($op)
@@ -134,17 +134,17 @@ function uc_oklink_uc_order($op, $order, $arg2)
         case 'load':      
             break;
         case 'submit':
-            $client = Oklink::withApiKey(variable_get('uc_oklink_api_key',''),variable_get('uc_oklink_api_secret',''));
+            $client = Bihang::withApiKey(variable_get('uc_bihang_api_key',''),variable_get('uc_bihang_api_secret',''));
 
             if( variable_get('clean_url', '0') == 0 ){
-                $callback_url = $base_url . '/?q=uc_oklink/notifications'; 
+                $callback_url = $base_url . '/?q=uc_bihang/notifications'; 
                 $success_url  = $base_url . '/?q=cart/checkout'; 
             }else{
-                $callback_url = $base_url . '/uc_oklink/notifications';
+                $callback_url = $base_url . '/uc_bihang/notifications';
                 $success_url  = $base_url . '/cart/checkout'; 
             }
 
-            $site_url = variable_get('uc_oklink_base_url', $base_url);
+            $site_url = variable_get('uc_bihang_base_url', $base_url);
             $params = array(
                         'name'           => 'Order #'.$order->order_id,
                         'price'          => uc_order_get_total($order),
@@ -155,7 +155,7 @@ function uc_oklink_uc_order($op, $order, $arg2)
             $result = $client->buttonsButton($params);
             var_dump($result);
             if( $result && $result->button ){
-                db_insert('uc_payment_oklink')
+                db_insert('uc_payment_bihang')
                     ->fields(array(
                         'button_id'    => $result->button->id,
                         'order_id'     => $order->order_id,
@@ -164,37 +164,37 @@ function uc_oklink_uc_order($op, $order, $arg2)
             }
             break;
         } // end switch - check for order action taken
-    } // end if - check to make sure payment method is 'oklink', etc.
-} // end function - uc_oklink_uc_order
+    } // end if - check to make sure payment method is 'bihang', etc.
+} // end function - uc_bihang_uc_order
 
 /**
- * Payment method callback for the oklink payment method
+ * Payment method callback for the bihang payment method
  *
  * @param $op
  * @param $order
  */
-function uc_payment_method_oklink($op, &$order)
+function uc_payment_method_bihang($op, &$order)
 {
     switch ($op)
     {
     case 'settings':
-        return uc_oklink_settings_form();
+        return uc_bihang_settings_form();
         break;
 
     case 'cart-details':
-        $txt = '<br /><br />' . t('The price will be converted to bitcoins at the current to-the-minute exchange rate, and you will have') . ' ' . OKLINK_INVOICE_EXPIRATION_TIME . ' ' . t('minutes to send payment before the invoice expires.');
+        $txt = '<br /><br />' . t('The price will be converted to bitcoins at the current to-the-minute exchange rate, and you will have') . ' ' . BIHANG_INVOICE_EXPIRATION_TIME . ' ' . t('minutes to send payment before the invoice expires.');
         return array('#markup' => $txt);
         break;
     case 'customer-view':
         if( $order->order_status == 'pending' ){
-            $button_id = db_query("SELECT button_id FROM {uc_payment_oklink} WHERE order_id = :order_id", array(':order_id' => $order->order_id))->fetchField();
+            $button_id = db_query("SELECT button_id FROM {uc_payment_bihang} WHERE order_id = :order_id", array(':order_id' => $order->order_id))->fetchField();
                 // display the invoice ID, with a link to the url
-            $url = OKLINK_WEBSITE.'/merchant/mPayOrderStemp1.do?buttonid='.$button_id;
+            $url = BIHANG_WEBSITE.'/merchant/mPayOrderStemp1.do?buttonid='.$button_id;
             $txt =  '<a href="' . $url . '" target="_blank" class="form-submit">Pay It</a>';
             return array('#markup' => $txt);           
         } 
 
         break;
     }
-} // end function - uc_payment_method_oklink
+} // end function - uc_payment_method_bihang
 

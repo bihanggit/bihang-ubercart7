@@ -1,4 +1,4 @@
-oklink/ubercart7-plugin
+bihang/ubercart7-plugin
 ======================
 
 # Installation
@@ -7,13 +7,13 @@ oklink/ubercart7-plugin
 
 # Configuration
 
-* Sign up for a merchant account with Oklink, at [https://www.oklink.com](https://www.oklink.com). Be sure to
+* Sign up for a merchant account with Bihang, at [https://www.bihang.com](https://www.bihang.com). Be sure to
   read all provided information thoroughly.
-* Create an API key and secret at [oklink](https://www.oklink.com/apiKey/index.do "oklink").
-* Under Administer > Site Building > Modules, verify that the Oklink module is
+* Create an API key and secret at [bihang](https://www.bihang.com/apiKey/index.do "bihang").
+* Under Administer > Site Building > Modules, verify that the bihang module is
   enabled under the Ubercart - payment section.
 * Under Store Administration > Configuration > Payment Settings > Payment Methods,
-  enable the Oklink payment method, and then go to the Oklink settings menu.
+  enable the Bihang payment method, and then go to the Bihang settings menu.
 * Enter your API Key and Secret under the Administrator settings dropdown menu, and enter
   other settings as desired.
 
